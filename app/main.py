@@ -17,20 +17,21 @@ Gradio UI가 /ui 경로에 마운트되어 있습니다.
     - API 문서: http://localhost:8000/docs
     - Gradio UI: http://localhost:8000/ui
 """
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware
-from loguru import logger
-import sys
-import gradio as gr
 
-from app.core.config import settings
+import sys
+from contextlib import asynccontextmanager
+
+import gradio as gr
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from loguru import logger
+
 from app.api.routes import api_router
+from app.core.config import settings
 from app.ui import create_demo
 
-
-logger.remove() 
+logger.remove()
 logger.add(
     sys.stdout,
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
@@ -71,6 +72,7 @@ async def lifespan(app: FastAPI):
     # 데이터베이스(Supabase) 연결 초기화
     try:
         from app.repositories import get_supabase_client
+
         client = await get_supabase_client()
         if client is not None:
             logger.info("✅ Supabase 클라이언트 초기화 완료")
@@ -78,16 +80,16 @@ async def lifespan(app: FastAPI):
             logger.warning("⚠️ Supabase 미연결 (URL/KEY 미설정) - DB 기능 비활성화")
     except Exception as e:
         logger.error(f"Supabase 초기화 실패: {e}")
-    
+
     # LangGraph 그래프 초기화
     try:
         from app.graph import get_lumi_graph
-        graph = get_lumi_graph()
+
+        graph = get_lumi_graph()  # noqa : F841
         logger.info("✅ LangGraph 그래프 컴파일 완료")
     except Exception as e:
         logger.error(f"LangGraph 초기화 실패: {e}")
 
-    
     yield  # 이 지점에서 서버가 요청을 처리함
 
     # ===== 서버 종료 시 실행 =====
@@ -102,7 +104,9 @@ def _validate_settings():
     설정되지 않은 경우 경고 로그를 출력합니다.
     """
     if not settings.upstage_api_key:
-        logger.warning("UPSTAGE_API_KEY가 설정되지 않았습니다. LLM 기능을 사용할 수 없습니다.")
+        logger.warning(
+            "UPSTAGE_API_KEY가 설정되지 않았습니다. LLM 기능을 사용할 수 없습니다."
+        )
 
     if settings.environment == "production" and settings.debug:
         logger.warning("Production 환경에서 DEBUG 모드가 활성화되어 있습니다!")
@@ -146,7 +150,6 @@ app.add_middleware(
 )
 
 
-
 # ===== 라우터 등록 =====
 # API 라우터 등록 (/api/v1 prefix)
 # 버전 관리를 위해 /api/v1 prefix 사용
@@ -176,6 +179,7 @@ async def root():
     """
     return RedirectResponse(url="/ui")
 
+
 # 기존 루트 -> /api로 이동
 @app.get("/api", tags=["Root"])
 async def api_info() -> dict:
@@ -186,8 +190,9 @@ async def api_info() -> dict:
             "swagger": "/docs",
             "redoc": "/redoc",
         },
-        "ui": "/ui"
+        "ui": "/ui",
     }
+
 
 if __name__ == "__main__":
     import uvicorn

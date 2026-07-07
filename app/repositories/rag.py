@@ -2,14 +2,17 @@
 RAG를 위한 문서 검색
 - query(사용자 입력)와 가장 유사한 Lumi문서 K개를 반환
 """
+
 from typing import Literal
 
 from langchain_upstage import UpstageEmbeddings
 from loguru import logger
+
 from app.core.config import settings
 from app.repositories import get_supabase_client
 
-class RAGRepository :
+
+class RAGRepository:
     """
     Supabase pgvector를 사용하여 시멘틱 검색을 수행합니다.
 
@@ -17,7 +20,7 @@ class RAGRepository :
     - filter_state="active" : 활성화된 문서만 검색(기본값)
     - filter_state="deprecated" : 폐기된 문서만 검색
     - filter_state="all" : 모든 문서 검색
-    
+
     Attributes:
         embeddings: Upstage 임베딩 클라이언트
     """
@@ -28,18 +31,17 @@ class RAGRepository :
         """
 
         self.embeddings = UpstageEmbeddings(
-            api_key=settings.upstage_api_key,
-            model=settings.embedding_model
+            api_key=settings.upstage_api_key, model=settings.embedding_model
         )
 
         logger.info("RAGRepository 초기화 완료")
-    
+
     async def search_similar(
         self,
         query: str,
         k: int = 3,
-        filter_status: Literal["active", "deprecated", "all"] = "active"
-    ) -> list[dict] :
+        filter_status: Literal["active", "deprecated", "all"] = "active",
+    ) -> list[dict]:
         """
         쿼리와 유사한 문서를 검색합니다.
 
@@ -57,7 +59,7 @@ class RAGRepository :
         """
         logger.info(f"RAG 검색: '{query[:30]}... (k={k}, filter={filter_status})")
 
-        try :
+        try:
             pass
             # (1) 쿼리 임베딩
             query_embedding = await self.embeddings.aembed_query(query)
@@ -68,9 +70,9 @@ class RAGRepository :
                 "match_documents",
                 {
                     "query_embedding": query_embedding,
-                    "match_count":k,
-                    "filter_status": filter_status
-                }
+                    "match_count": k,
+                    "filter_status": filter_status,
+                },
             ).execute()
 
             docs = result.data or []
@@ -85,20 +87,22 @@ class RAGRepository :
 
             return docs
 
-        except Exception as e :
+        except Exception as e:
             logger.error(f"RAG 검색 실패: {e}")
             return []
+
 
 # 싱글톤 인스턴스
 _rag_repository: RAGRepository | None = None
 
-def get_rag_repository() -> RAGRepository :
+
+def get_rag_repository() -> RAGRepository:
     """
     RAGRepository 싱글톤 인스턴스를 반환합니다.
     """
     global _rag_repository
 
-    if _rag_repository is None :
+    if _rag_repository is None:
         _rag_repository = RAGRepository()
-    
+
     return _rag_repository

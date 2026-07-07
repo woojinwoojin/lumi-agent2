@@ -1,15 +1,23 @@
 import json
 from datetime import datetime
 from typing import Literal
+
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_upstage import ChatUpstage
 from loguru import logger
 from pydantic import BaseModel, Field
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_upstage import ChatUpstage
-from app.graph.state import LumiState
+
 from app.core.config import settings
-from app.core.prompts import ROUTER_PROMPT, RESPONSE_PROMPT, RAG_GROUNDING, TOOL_GROUNDING
-from app.tools.executor import ToolExecutor
+from app.core.prompts import (
+    RAG_GROUNDING,
+    RESPONSE_PROMPT,
+    ROUTER_PROMPT,
+    TOOL_GROUNDING,
+)
+from app.graph.state import LumiState
 from app.repositories.rag import get_rag_repository
+from app.tools.executor import ToolExecutor
+
 
 class RouterOutput(BaseModel):
     """
@@ -29,16 +37,15 @@ class RouterOutput(BaseModel):
         default=None, description="도구 실행 인자 (intent=tool일 때만)"
     )
 
-def get_llm() -> ChatUpstage :
+
+def get_llm() -> ChatUpstage:
     """
     Upstage Solar LLM 클라이언트를 반환
     """
     return ChatUpstage(
-        api_key=settings.upstage_api_key, 
-        model="solar-pro3",
-        timeout=30,
-        max_retries=2
+        api_key=settings.upstage_api_key, model="solar-pro3", timeout=30, max_retries=2
     )
+
 
 async def router_node(state: LumiState) -> dict:
     """사용자 의도 분류"""
@@ -74,20 +81,18 @@ async def rag_node(state: LumiState) -> dict:
     """
     logger.info("[RAG] 문서 검색 시작")
 
-    user_input = state['messages'][-1].content
+    user_input = state["messages"][-1].content
 
     try:
         pass
         rag_repo = get_rag_repository()
-        
+
         docs = await rag_repo.search_similar(
-            query=user_input,
-            k=3,
-            filter_status='active'
+            query=user_input, k=3, filter_status="active"
         )
 
         # 검색 결과에서 content만 추출
-        retrieved_docs = [doc['content'] for doc in docs]
+        retrieved_docs = [doc["content"] for doc in docs]
 
         logger.info(f"[RAG] 검색 완료: {len(retrieved_docs)}개 문서")
 
@@ -96,11 +101,12 @@ async def rag_node(state: LumiState) -> dict:
 
         retrieved_docs = []
 
-    return {
-        "retrieved_docs": retrieved_docs
-    }
+    return {"retrieved_docs": retrieved_docs}
+
 
 tool_executor = ToolExecutor()
+
+
 async def tool_node(state: LumiState) -> dict:
     """
     Tool 노드 : Tool 실행
@@ -112,23 +118,21 @@ async def tool_node(state: LumiState) -> dict:
         dict : tool_result를 state에 업데이트 함
     """
 
-    tool_name = state['tool_name']
-    tool_args = state['tool_args'] or {}
+    tool_name = state["tool_name"]
+    tool_args = state["tool_args"] or {}
 
     logger.info(f"[Tool] 툴 실행: {tool_name}")
 
     # Tool 실행을 위해 ToolExecutor를 구현
     result = await tool_executor.execute(
-        tool_name = tool_name,
-        tool_args = tool_args,
-        session_id = state['session_id'],
-        user_id = state['user_id']
+        tool_name=tool_name,
+        tool_args=tool_args,
+        session_id=state["session_id"],
+        user_id=state["user_id"],
     )
 
     logger.info(f"[Tool] 실행 결과: {result}")
-    return {
-        "tool_result": result
-    }
+    return {"tool_result": result}
 
 
 async def response_node(state: LumiState) -> dict:
@@ -167,7 +171,9 @@ async def response_node(state: LumiState) -> dict:
 
     elif intent == "tool":
         tool_result = json.dumps(state["tool_result"], ensure_ascii=False)
-        system_prompt = f"{RESPONSE_PROMPT}\n\n{TOOL_GROUNDING.format(tool_result=tool_result)}"
+        system_prompt = (
+            f"{RESPONSE_PROMPT}\n\n{TOOL_GROUNDING.format(tool_result=tool_result)}"
+        )
     else:
         # 일반 대화 응답: 페르소나 프롬프트만 사용
         system_prompt = RESPONSE_PROMPT
@@ -197,7 +203,7 @@ async def response_node(state: LumiState) -> dict:
         response = await llm.ainvoke(messages)
         ai_response = response.content
 
-        logger.info(f"💬 [Response] 응답 생성 완료")
+        logger.info("💬 [Response] 응답 생성 완료")
 
     except Exception as e:
         logger.error(f"응답 생성 오류: {e}")
