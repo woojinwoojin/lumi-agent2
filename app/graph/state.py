@@ -1,5 +1,6 @@
-from typing import TypedDict, Literal, Annotated
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
+from typing import Annotated, Literal, TypedDict
+
+from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
 
@@ -38,7 +39,7 @@ def create_initial_state(
         messages: 초기 메시지 목록 (선택)
 
     Returns:
-        LumiState: 초기화된 상태 딕셔너리 
+        LumiState: 초기화된 상태 딕셔너리
     """
     return LumiState(
         messages=messages or [],
@@ -50,4 +51,3 @@ def create_initial_state(
         session_id=session_id,
         user_id=user_id,
     )
-

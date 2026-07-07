@@ -3,8 +3,10 @@
 
 이 패키지에서는 데이터베이스(Supabase) 접근 로직을 정의합니다.
 """
-from app.core.config import settings
+
 from loguru import logger
+
+from app.core.config import settings
 
 # Supabasse 클라이언트 싱글톤
 _supabase_client = None
@@ -13,7 +15,7 @@ _supabase_client = None
 async def get_supabase_client():
     """
     Supabase 클라이언트를 반환합니다 (싱글톤 패턴).
-    
+
     설정(settings)에 Supabase URL과 Key가 있을 때만 연결을 시도합니다.
     연결 실패 시 None을 반환합니다.
     """
@@ -22,6 +24,7 @@ async def get_supabase_client():
     if _supabase_client is None and settings.supabase_url and settings.supabase_key:
         try:
             from supabase import acreate_client
+
             _supabase_client = await acreate_client(
                 settings.supabase_url,
                 settings.supabase_key,
@@ -58,4 +61,3 @@ async def get_supabase_client():
 #             _supabase_client = None
 
 #     return _supabase_client
-

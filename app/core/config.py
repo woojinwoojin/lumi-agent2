@@ -12,7 +12,6 @@ Production에서는 환경변수를 통해 설정을 주입받습니다.
     db_url = settings.supabase_url
 """
 
-import os
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict

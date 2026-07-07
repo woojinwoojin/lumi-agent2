@@ -4,7 +4,6 @@
 Supabase에 팬들의 메시지를 저장합니다.
 """
 
-from typing import Optional
 from loguru import logger
 
 from . import get_supabase_client
@@ -34,7 +33,7 @@ class FanLetterRepository:
         session_id: str,
         category: str,
         message: str,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> str:
         """
         팬레터를 저장합니다.
@@ -58,12 +57,14 @@ class FanLetterRepository:
             # 비동기 실행: insert 후 await 로 결과를 기다린다
             response = await (
                 client.table("fan_letters")
-                .insert({
-                    "session_id": session_id,
-                    "user_id": user_id,
-                    "category": category,
-                    "message": message,
-                })
+                .insert(
+                    {
+                        "session_id": session_id,
+                        "user_id": user_id,
+                        "category": category,
+                        "message": message,
+                    }
+                )
                 .execute()
             )
 
@@ -75,4 +76,3 @@ class FanLetterRepository:
         except Exception as e:
             logger.error(f"Supabase 저장 오류: {e}")
             return ""
-
