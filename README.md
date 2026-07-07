@@ -401,12 +401,12 @@ app/
       uv run pytest tests/ -v            # CI의 test Job과 동일한 명령. push 전에 로컬에서 먼저 통과 확인
       ```
         - [v] health API 등록
-    - [] 확인 끝났으면 `test.py` 삭제
-- [] 로컬 사전 검사 ② — pre-commit 훅 (commit할 때 위 검사를 자동으로) — 아래 섹션 참고
-    - [] `uv run pre-commit install` — Git 훅 등록 (한 번만)
-    - [] 다시 문제 있는 `test.py` 를 만들고 `git add` → `git commit` → 훅이 자동으로 잡아서 수정하는지 확인
-    - [] 이미 push된 파일 전체 검사: `uv run pre-commit run --all-files`
-    - [] Unsafe 항목(F841·E402)은 직접 수정
+    - [v] 확인 끝났으면 `test.py` 삭제
+- [v] 로컬 사전 검사 ② — pre-commit 훅 (commit할 때 위 검사를 자동으로) — 아래 섹션 참고
+    - [v] `uv run pre-commit install` — Git 훅 등록 (한 번만)
+    - [v] 다시 문제 있는 `test.py` 를 만들고 `git add` → `git commit` → 훅이 자동으로 잡아서 수정하는지 확인
+    - [v] 이미 push된 파일 전체 검사: `uv run pre-commit run --all-files`
+    - [v] Unsafe 항목(F841·E402)은 직접 수정
 - [v] Test가 통과되어야 Merge 가능하도록 설정 (Ruleset)
     - [v] Settings → Rules → Rulesets → New ruleset → **New branch ruleset**
     - [v] Ruleset Name: `protect main branch` / Enforcement status: **Active**
@@ -414,8 +414,80 @@ app/
     - [v] Rules 체크: **Require a pull request before merging** + **Require status checks to pass** → 검색창에서 **Code Quality** 와 **Unit Tests** 선택
         - 목록에는 YAML의 job id(lint/test)가 아니라 **Job의 표시 이름**(`name:` 값)이 뜬다
         - 이 목록은 CI가 최소 한 번 실행된 뒤에만 나타남 (앞 단계에서 이미 돌렸으므로 보임)
-- [] AI 코드 리뷰 (CodeRabbit 연동 - 과제 교안보고 직접 해보기)
-    - [] https://app.coderabbit.ai/login 접속 → **GitHub Cloud** 로 회원가입 후 인증(Authorize)
-    - [] 내 repo에 권한(Grant) 부여
-    - [] 연동만 해두면 이후 **PR을 열 때마다 자동으로 리뷰 코멘트**가 달림
-    - [] 리뷰 제안 프롬프트를 바탕으로 **코드 자동 수정 커밋**까지 만들어 주는 것 확인 (fix: apply CodeRabbit auto-fixes)
+- [v] AI 코드 리뷰 (CodeRabbit 연동 - 과제 교안보고 직접 해보기)
+    - [v] https://app.coderabbit.ai/login 접속 → **GitHub Cloud** 로 회원가입 후 인증(Authorize)
+    - [v] 내 repo에 권한(Grant) 부여
+    - [v] 연동만 해두면 이후 **PR을 열 때마다 자동으로 리뷰 코멘트**가 달림
+    - [v] 리뷰 제안 프롬프트를 바탕으로 **코드 자동 수정 커밋**까지 만들어 주는 것 확인 (fix: apply CodeRabbit auto-fixes)
+
+## 강의 노트 5강
+- 핵심 목표 : 클라우드 배포(CD) — main에 머지되면 **Docker 이미지가 자동으로 빌드되고 GCP 서버에 배포**되게 만들기
+
+
+
+### TODO
+- [] 사전 확인
+    - [v] Docker Desktop 설치 & 실행
+        - macOS: https://docs.docker.com/desktop/setup/install/mac-install/ (Apple Silicon/Intel 구분)
+        - Windows: https://docs.docker.com/desktop/setup/install/windows-install/ (**WSL2 필요** — 설치 중 안내대로 활성화)
+        - 확인: `docker version` (Client/Server 둘 다 나오면 OK — Server가 없으면 Docker Desktop 앱을 실행할 것)
+- [] Docker 파일 3종 작성 (아래 해설 참고)
+    - [] `Dockerfile` — 멀티 스테이지 빌드 + non-root 유저 + 헬스체크
+    - [] `.dockerignore` — .venv/.git/.env 등 제외
+    - [] `docker-compose.yml` — 포트·환경변수·헬스체크·재시작 정책
+- [] 로컬 실습 — 이미지 빌드 & 실행 (mac/Windows 공통, 아래 "로컬 실습" 섹션 참고)
+    - [] Docker Desktop 실행
+    - [] `docker build -t lumi-agent .` — 이미지 빌드
+    - [] `docker images` — 만들어진 이미지 확인
+    - [] `docker run -d -p 8000:8000 --env-file .env lumi-agent` — 컨테이너 실행
+    - [] `docker ps` — 실행 중인 컨테이너 확인
+    - [] `docker stop <컨테이너ID>` — 컨테이너 종료
+    - [] 브라우저로 http://localhost:8000/ui 접속 확인
+
+    - 아래 내용은 집에서 해보기
+        - [] `docker compose up -d --build` - Docker Compose로 재실행
+        - [] `docker compose logs -f` - 실행 로그 확인
+        - [] `docker compose down` - 컨테이너 종료
+        - [] 브라우저로 http://localhost:8000/ui 접속 확인
+- [] GCP 서버 준비 (Compute Engine)
+    - [] gcloud CLI 설치 & 초기화 (SSH 접속·키 생성에 필요)
+        - 설치: https://cloud.google.com/sdk/docs/install (mac은 `brew install --cask google-cloud-sdk` 도 가능)
+        - `gcloud init` → 브라우저로 Google 로그인 → 프로젝트 선택
+    - [v] VM 인스턴스 생성: 이름 `lumi-server` / 리전 asia-northeast3(서울) / **e2-medium** / **Ubuntu 22.04 LTS** / 네트워크 태그 `lumi-server`
+        > 💸 e2-medium은 무료 등급이 아님 (결제 계정 필요, 켜둔 시간만큼 과금) → **실습 후 VM 삭제**할 것!
+    - [v] 방화벽 규칙: VPC 네트워크 → 방화벽 → 규칙 만들기 — **tcp:8000 허용** · 대상 태그 `lumi-server` · 소스 `0.0.0.0/0` (VM의 태그와 규칙의 대상 태그가 일치해야 적용됨!)
+    - [] SSH 접속: `gcloud compute ssh --zone "asia-northeast3-a" "appuser@lumi-server" --project "<내 프로젝트ID>" --quiet` (appuser = 배포용 일반 계정, gcloud가 자동 생성)
+        > ⚠️ 최초 접속 시 SSH 키(`~/.ssh/google_compute_engine`)가 자동 생성됨.
+    - [] 서버에 Docker 설치 (설치 후 **재접속해야** sudo 없이 docker 사용 가능)
+      ```bash
+      sudo apt-get update && sudo apt-get install -y docker.io
+      sudo systemctl enable --now docker
+      sudo usermod -aG docker $USER
+      sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
+      sudo chmod +x /usr/local/bin/docker-compose
+      exit   # docker 그룹 적용을 위해 재접속
+      ```
+    - [] `docker run hello-world` — "Hello from Docker!" 나오면 준비 완료
+- [] GitHub Secrets **6개** 등록 (Settings → Secrets and variables → Actions)
+    - [] 기존 3개 (4강에서 등록): `UPSTAGE_API_KEY` / `SUPABASE_URL` / `SUPABASE_KEY`
+    - [] `GCE_HOST` — VM 외부 IP (VM 인스턴스 목록에서 확인)
+    - [] `GCE_USERNAME` — SSH 사용자명 (예: `appuser`)
+    - [] `GCE_SSH_KEY` — SSH **개인키 전체 내용**
+        - macOS/Linux: `cat ~/.ssh/google_compute_engine`
+        - Windows PowerShell: `Get-Content "$env:USERPROFILE\.ssh\google_compute_engine"`
+        - `-----BEGIN ... KEY-----` 부터 `-----END ... KEY-----` 까지 통째로 복사
+- [] CD 파이프라인 연결
+    - [] 새 브랜치: `git checkout -b feat/cd`
+    - [] `.github/workflows/cd.yml` 작성 (아래 해설 참고)
+    - [] add / commit / push → PR 생성 → CI 통과 확인 → **Merge**
+      ```bash
+      git add Dockerfile .dockerignore docker-compose.yml .github/workflows/cd.yml
+      git commit -m "feat: cd 파이프라인 추가"
+      git push --set-upstream origin feat/cd
+      ```
+    - [] Merge 되면 Actions 탭에서 **Lumi Agent CD** 실행 확인 (Build & Push to GHCR → Deploy to Compute Engine → Summary)
+- [] 배포 확인
+    - [] 브라우저에서 `http://<VM 외부IP>:8000` 접속 (루미 서비스!)
+    - [] 서버 SSH 접속 후 `docker ps -a` — STATUS `Up`, PORTS `0.0.0.0:8000->8000` 이면 정상
+    - [] `docker logs <컨테이너ID> -f` — 실시간 로그 확인 (ID는 앞 6글자만 써도 됨)
+- [] (참고) 롤백: Actions → Lumi Agent CD → **Run workflow** → `rollback` 체크 → 이전 이미지로 자동 복구

@@ -1,0 +1,10 @@
+# Python virtual environment
+.venv/
+
+# Git files
+.git/
+.gitignore
+
+# Environment variables
+.env
+.env.*
